@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kaida Studio - ProximSys</title>
+  <meta name="description" content="Sistema web de monitoramento de proximidade com Arduino, Flask e PostgreSQL." />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <script defer src="{{ url_for('static', filename='js/script.js') }}"></script>
+</head>
+<body>
+  <div class="bg-watermark"></div>
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand__logo-wrap">
+        <img src="{{ url_for('static', filename='img/kaida-studio-logo.jpg') }}" alt="Kaida Studio" class="brand__logo">
+      </div>
+
+      <div class="brand__text">
+        <span class="eyebrow">Kaida Studio</span>
+        <h1>ProximSys</h1>
+        <p>Monitoramento em tempo real de proximidade com Arduino, Flask e PostgreSQL.</p>
+      </div>
+    </div>
+
+    <div class="topbar__actions">
+      <button class="btn btn--ghost" id="toggleGaugeBtn" type="button">Trocar para velocímetro</button>
+      <button class="btn btn--ghost" id="btnExportar" type="button">Exportar CSV</button>
+      <a class="btn btn--solid" href="#historico">Ver histórico</a>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="hero card">
+      <div class="hero__left">
+        <div class="section-label">Status ao vivo</div>
+        <h2 id="mainStatusTitle">Carregando...</h2>
+        <p id="mainStatusCopy">Aguardando leitura do sensor.</p>
+
+        <div class="stats">
+          <div class="stat">
+            <span class="stat__label">Distância</span>
+            <strong id="distancia">-- cm</strong>
+          </div>
+          <div class="stat">
+            <span class="stat__label">Situação</span>
+            <strong id="status">--</strong>
+          </div>
+          <div class="stat">
+            <span class="stat__label">Atualizado em</span>
+            <strong id="atualizadoEm">--</strong>
+          </div>
+        </div>
+
+        <div class="legend">
+          <span class="legend__item" data-status="TA_LIVRE">Tá livre</span>
+          <span class="legend__item" data-status="CUIDADO">Cuidado</span>
+          <span class="legend__item" data-status="MUITO_CUIDADO">Muito cuidado</span>
+          <span class="legend__item" data-status="PERIGO">Perigo</span>
+          <span class="legend__item" data-status="COLISAO_EMINENTE">Colisão eminente</span>
+        </div>
+      </div>
+
+      <div class="hero__right">
+        <div class="gauge-shell gauge-shell--bar is-active" id="barGauge">
+          <div class="gauge-title">Gauge de proximidade</div>
+          <div class="bar-gauge">
+            <div class="bar-gauge__scale">
+              <span>0</span><span>50</span><span>100</span>
+            </div>
+            <div class="bar-gauge__track">
+              <div class="bar-gauge__fill" id="barFill"></div>
+              <div class="bar-gauge__shine"></div>
+            </div>
+            <div class="bar-gauge__label">
+              <strong id="proximidadeBar">0%</strong>
+              <span id="proximidadeTextBar">distância segura</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="gauge-shell gauge-shell--speed hidden" id="speedGauge">
+          <div class="gauge-title">Velocímetro de risco</div>
+          <div class="speedometer">
+            <svg viewBox="0 0 300 180" aria-label="Velocímetro">
+              <defs>
+                <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#28d17c"></stop>
+                  <stop offset="30%" stop-color="#ffc933"></stop>
+                  <stop offset="60%" stop-color="#ff8a1f"></stop>
+                  <stop offset="100%" stop-color="#ff1f3d"></stop>
+                </linearGradient>
+                <filter id="glow">
+                  <feGaussianBlur stdDeviation="2.5" result="coloredBlur"></feGaussianBlur>
+                  <feMerge>
+                    <feMergeNode in="coloredBlur"></feMergeNode>
+                    <feMergeNode in="SourceGraphic"></feMergeNode>
+                  </feMerge>
+                </filter>
+              </defs>
+
+              <path d="M 30 150 A 120 120 0 0 1 270 150" class="speedometer__arc speedometer__arc--base"></path>
+              <path d="M 30 150 A 120 120 0 0 1 270 150" class="speedometer__arc speedometer__arc--fill" id="speedArc"></path>
+
+              <g id="needle" class="speedometer__needle">
+                <line x1="150" y1="150" x2="150" y2="58"></line>
+                <circle cx="150" cy="150" r="10"></circle>
+              </g>
+            </svg>
+
+            <div class="speedometer__center">
+              <strong id="proximidadeSpeed">0%</strong>
+              <span id="proximidadeTextSpeed">distância segura</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="alert-card" id="alertCard">
+          <span class="alert-card__label">Atenção</span>
+          <strong id="alertText">Sistema aguardando leitura.</strong>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid">
+      <article class="card info-card">
+        <div class="section-label">Resumo</div>
+        <h3>Leitura em tempo real</h3>
+        <p>O painel atualiza automaticamente com os dados vindos do Arduino via Flask.</p>
+      </article>
+
+      <article class="card info-card">
+        <div class="section-label">Camadas</div>
+        <h3>Hardware + Back-end + Front</h3>
+        <p>Arduino coleta, Flask expõe a API e o HTML monta a interface visual.</p>
+      </article>
+
+      <article class="card info-card">
+        <div class="section-label">Banco de dados</div>
+        <h3>Histórico persistido</h3>
+        <p>Eventos críticos são gravados no PostgreSQL e podem ser consultados no painel.</p>
+      </article>
+    </section>
+
+    <section class="card database" id="historico">
+      <div class="database__header">
+        <div>
+          <div class="section-label">Banco de dados</div>
+          <h2>Histórico de eventos</h2>
+          <p>Registros carregados diretamente do PostgreSQL.</p>
+        </div>
+
+        <div class="database__meta">
+          <span class="pill" id="dbStatus">PostgreSQL</span>
+          <span class="pill pill--soft" id="dbCount">0 registros</span>
+        </div>
+      </div>
+
+      <div class="database__stats">
+        <article class="db-stat">
+          <span class="db-stat__label">Eventos registrados</span>
+          <strong id="totalEventos">0</strong>
+          <p>Total de eventos críticos salvos no banco.</p>
+        </article>
+
+        <article class="db-stat">
+          <span class="db-stat__label">Última colisão</span>
+          <strong id="ultimaColisao">--</strong>
+          <p>Momento mais recente com risco máximo.</p>
+        </article>
+
+        <article class="db-stat">
+          <span class="db-stat__label">Exportação</span>
+          <strong>CSV</strong>
+          <p>Use o botão no topo para baixar o histórico.</p>
+        </article>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Data / Hora</th>
+              <th>Distância</th>
+              <th>Situação</th>
+              <th>Descrição</th>
+            </tr>
+          </thead>
+          <tbody id="historyRows">
+            <tr>
+              <td colspan="4" class="empty-row">Sem registros ainda.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
